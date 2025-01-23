@@ -1,0 +1,84 @@
+import os
+from flask import Flask, request
+from twilio.twiml.messaging_response import MessagingResponse
+from twilio.rest import Client
+
+# Configurações do Twilio (substitua com suas credenciais)
+TWILIO_ACCOUNT_SID = 'SEU_ACCOUNT_SID'
+TWILIO_AUTH_TOKEN = 'SEU_AUTH_TOKEN'
+TWILIO_WHATSAPP_NUMBER = 'whatsapp:+14155238886'
+
+class WhatsAppBot:
+    def __init__(self):
+        self.twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        self.app = Flask(__name__)
+        self.setup_routes()
+
+    def setup_routes(self):
+        @self.app.route('/webhook', methods=['POST'])
+        def webhook():
+            # Receber mensagem de entrada do WhatsApp
+            incoming_msg = request.values.get('Body', '').lower()
+            from_number = request.values.get('From', '')
+            
+            # Processamento de resposta
+            response = self.process_message(incoming_msg)
+            
+            # Criar resposta do Twilio
+            twilio_response = MessagingResponse()
+            twilio_response.message(response)
+            
+            return str(twilio_response)
+
+    def process_message(self, message):
+        # Lógica de processamento de mensagens
+        if 'oi' in message or 'olá' in message:
+            return "Olá! Como posso ajudar você hoje? Aqui estão algumas opções:\n1. Suporte\n2. Informações\n3. Produtos"
+        
+        elif 'suporte' in message:
+            return "Nosso horário de suporte é das 8h às 18h. Como podemos ajudar?"
+        
+        elif 'produtos' in message:
+            return "Nossos principais produtos são:\n- Produto A\n- Produto B\n- Produto C\nQual te interessa?"
+        
+        elif 'informações' in message:
+            return "Estamos localizados em São Paulo e trabalhamos com soluções digitais."
+        
+        else:
+            return "Desculpe, não entendi. Digite 'oi' para ver as opções disponíveis."
+
+    def send_whatsapp_message(self, to_number, message):
+        # Método para enviar mensagem proativa
+        try:
+            message = self.twilio_client.messages.create(
+                from_=TWILIO_WHATSAPP_NUMBER,
+                body=message,
+                to=f'whatsapp:{to_number}'
+            )
+            return message.sid
+        except Exception as e:
+            print(f"Erro ao enviar mensagem: {e}")
+            return None
+
+    def run(self, debug=False, port=5000):
+        self.app.run(debug=debug, port=port)
+
+# Exemplo de uso
+if __name__ == '__main__':
+    bot = WhatsAppBot()
+    bot.run(debug=True)
+
+# Instruções de configuração
+"""
+# Pré-requisitos:
+# 1. Conta no Twilio
+# 2. Número do WhatsApp Twilio
+# 3. Webhook configurado
+
+# Instalação:
+pip install flask twilio
+
+# Configuração do Webhook:
+# - Use serviço como ngrok para expor localhost
+# - Configure webhook no Twilio Console
+"""
